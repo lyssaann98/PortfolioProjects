@@ -1,0 +1,118 @@
+---
+title: "Natural Cubic Splines"
+author: "Alyssa Rogers-Armstrong"
+date: "July 6th, 2024"
+output: pdf_document
+---
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+# Set so that long lines in R will be wrapped:
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy=TRUE)
+
+library(tidyverse)
+library(splines)
+library(ggplot2)
+library(caret)
+```
+
+Data Cleaning
+```{r}
+#Read in data
+data = read.csv("naivebayes_cleaneddata.csv")
+
+#Subset DC data
+dcdata = subset(data, Region == "Washington, DC metro area")
+
+#Change to Date format
+dcdata$DATE = as.Date(dcdata$DATE, format = '%m/%d/%y')
+
+#Keep needed columns
+dcdata = dcdata[, c("DATE", "Median.Sale.Price")]
+
+#Change median sale price to a numeric value
+dcdata$Median.Sale.Price = as.numeric(gsub("[$K]", "", dcdata$Median.Sale.Price))
+
+#Plot data to see trends
+ggplot(dcdata, aes(DATE, y=Median.Sale.Price))+
+  geom_point(color='blue', alpha=0.5)+theme_minimal()+
+  scale_x_date(date_labels = "%b-%Y", date_breaks="6 months")+
+  theme(axis.text.x = element_text(angle=45, hjust=1))
+```
+
+Cubic Spline Analysis
+```{r}
+# Determine the Optimal amount of Knots
+# Define a function to perform cross-validation for a given number of knots
+cv_spline = function(data, response, predictor, knots) {
+  set.seed(777)
+  train_control = trainControl(method = "cv", number = 10)
+  formula = as.formula(paste(response, "~ ns(", predictor, ", df =", knots, ")"))
+  model = train(formula,
+                 data = data,
+                 method = "lm",
+                 trControl = train_control)
+  return(mean(model$resample$RMSE))
+}
+
+# Define a range of knots to test
+knots_range = 3:20
+
+# Initialize a vector to store RMSE values
+rmse_values = numeric(length(knots_range))
+
+# Perform cross-validation for each number of knots
+for (i in seq_along(knots_range)) {
+  knots = knots_range[i]
+  rmse_values[i] = cv_spline(dcdata, "Median.Sale.Price", "DATE", knots)
+}
+
+# Find the optimal number of knots
+optimal_knots = knots_range[which.min(rmse_values)]
+cat("Optimal number of knots:", optimal_knots, "\n")
+
+# Fit the optimal spline model
+optimal_spline_model = lm(Median.Sale.Price ~ ns(DATE, df = optimal_knots), data = dcdata)
+
+# Predict values for plotting
+dcdata$Predicted.Price = predict(optimal_spline_model, newdata = dcdata)
+
+# Convert 'DATE' to numeric for quantile calculation
+numeric_dates <- as.numeric(dcdata$DATE)
+
+# Calculate the quantiles for the knot locations
+numeric_knots <- quantile(numeric_dates, probs = seq(0, 1, length.out = optimal_knots + 2))[-c(1, optimal_knots + 2)]
+
+# Convert numeric knots back to Date objects
+knots <- as.Date(numeric_knots, origin = "1970-01-01")
+
+# Print the knot locations
+print(knots)
+```
+
+Fit Model with Optimal Knots and Knot Positions
+```{r}
+# Fit the natural cubic spline model with specified knot locations
+spline_model <- lm(Median.Sale.Price ~ ns(DATE, knots = knots), data = dcdata)
+
+# Predict values for plotting
+dcdata$Predicted.Price <- predict(spline_model, newdata = dcdata)
+
+
+# Plot the results with knots
+p = ggplot(dcdata, aes(x = DATE, y = Median.Sale.Price)) +
+  geom_point(color = 'blue', alpha = 0.5) +
+  geom_line(aes(y = Predicted.Price), color = 'red', size = 1) +
+  geom_vline(xintercept = as.numeric(knots), linetype = "dashed", color = "green") +
+  labs(title = 'Median Home Sale Price Over Time in Washington DC',
+       subtitle = paste("Optimal number of knots:", optimal_knots),
+       x = 'Date', y = 'Median Sale Price') +
+  theme_minimal() +
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "6 months") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave(filename = "median.home.sale.price.dc.png", plot = p, width = 10, height = 6)
+```
+
+
+
+

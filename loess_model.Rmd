@@ -1,0 +1,118 @@
+---
+title: "LOESS Model"
+author: "Alyssa Rogers-Armstrong"
+date: "July 11th, 2024"
+output: pdf_document
+---
+
+```{r}
+df = read_csv("naivebayes_cleaneddata.csv", show_col_types = FALSE)
+
+# Fix columns
+df$Median.Sale.Price = as.numeric(gsub("[$K]", "", df$Median.Sale.Price))
+df$Market.Type = as.factor(df$Market.Type)
+
+#Change to Date format
+df$DATE = as.Date(df$DATE, format = '%m/%d/%y')
+
+
+# National Data
+nationaldata = subset(df, Region == "National")
+nationaldata = nationaldata[, c("DATE", "Median.Sale.Price", "Homes.Sold")]
+
+ggplot(nationaldata, aes(x=Market.Type, y=Homes.Sold))+
+  geom_point(color='blue', alpha=0.5)+theme_minimal()
+
+ggplot(nationaldata, aes(x=DATE, y=Homes.Sold)) +
+  geom_point(color='blue', alpha=0.5) +
+  geom_smooth(method = "loess", color='red', se = FALSE) +
+  theme_minimal() +
+  scale_x_date(date_labels = "%b-%Y", date_breaks="1 month") +
+  theme(axis.text.x = element_text(angle=45, hjust=1))
+
+# Chicago Data
+chicagodata = subset(df, Region == "Chicago, IL metro area")
+chicagodata = chicagodata[, c("DATE", "Median.Sale.Price", "Homes.Sold")]
+
+ggplot(chicagodata, aes(x=Median.Sale.Price, y=Homes.Sold))+
+  geom_point(color='blue', alpha=0.5)+theme_minimal()
+
+ggplot(chicagodata, aes(x=DATE, y=Homes.Sold)) +
+  geom_point(color='blue', alpha=0.5) +
+  geom_smooth(method = "loess", color='red', se = FALSE) +
+  theme_minimal() +
+  scale_x_date(date_labels = "%b-%Y", date_breaks="1 month") +
+  theme(axis.text.x = element_text(angle=45, hjust=1))
+
+# DC Data
+dcdata = subset(df, Region == "Washington, DC metro area")
+dcdata = dcdata[, c("DATE", "Median.Sale.Price", "Homes.Sold")]
+
+ggplot(dcdata, aes(x=Homes.Sold, y=Median.Sale.Price))+
+  geom_point(color='blue', alpha=0.5)+theme_minimal()
+
+ggplot(dcdata, aes(x=DATE, y=Homes.Sold)) +
+  geom_point(color='blue', alpha=0.5) +
+  geom_smooth(method = "loess", color='red', se = FALSE) +
+  theme_minimal() +
+  scale_x_date(date_labels = "%b-%Y", date_breaks="1 month") +
+  theme(axis.text.x = element_text(angle=45, hjust=1))
+
+# LA Data
+ladata = subset(df, Region == "Los Angeles, CA metro area")
+ladata = ladata[, c("DATE", "Median.Sale.Price", "Homes.Sold")]
+
+ggplot(ladata, aes(x=DATE, y=Homes.Sold))+
+  geom_point(color='blue', alpha=0.5)+theme_minimal()+
+  scale_x_date(date_labels = "%b-%Y", date_breaks="3 months")+
+  theme(axis.text.x = element_text(angle=45, hjust=1))
+
+ggplot(ladata, aes(x=DATE, y=Homes.Sold)) +
+  geom_point(color='blue', alpha=0.5) +
+  geom_smooth(method = "loess", color='red', se = FALSE) +
+  theme_minimal() +
+  scale_x_date(date_labels = "%b-%Y", date_breaks="1 month") +
+  theme(axis.text.x = element_text(angle=45, hjust=1))
+
+ladata_2022 <- ladata %>% filter(format(DATE, "%Y") == "2022")
+ladata_2023 <- ladata %>% filter(format(DATE, "%Y") == "2023")
+
+ggplot(ladata_2022, aes(x=DATE, y=Homes.Sold))+
+  geom_point(color='blue', alpha=0.5)+theme_minimal()
+
+ggplot(ladata_2023, aes(x=DATE, y=Homes.Sold))+
+  geom_point(color='blue', alpha=0.5)+theme_minimal()
+
+combined_data <- bind_rows(ladata_2022, ladata_2023)
+
+# Plot the combined data with different colors for each year
+ggplot(combined_data, aes(x=DATE, y=Homes.Sold)) +
+  geom_point(alpha=0.5) +
+  geom_smooth(method="loess", se=FALSE) +
+  theme_minimal() +
+  scale_x_date(date_labels = "%b-%Y", date_breaks="1 month") +
+  theme(axis.text.x = element_text(angle=45, hjust=1)) +
+  labs(title="Homes Sold in 2022 and 2023", x="Date", y="Homes Sold")
+
+# Subset the data for 2022 and 2023 and add a Year column
+ladata_2020 = ladata %>% filter(format(DATE, "%Y") == "2020") %>% mutate(Year = "2020")
+ladata_2021 = ladata %>% filter(format(DATE, "%Y") == "2021") %>% mutate(Year = "2021")
+ladata_2022 <- ladata %>% filter(format(DATE, "%Y") == "2022") %>% mutate(Year = "2022")
+ladata_2023 <- ladata %>% filter(format(DATE, "%Y") == "2023") %>% mutate(Year = "2023")
+
+# Combine the two subsets into one data frame
+combined_data <- bind_rows(ladata_2020, ladata_2021, ladata_2022, ladata_2023)
+
+# Plot the combined data with different colors for each year
+ggplot(combined_data, aes(x=DATE, y=Homes.Sold, color=Year)) +
+  geom_point(alpha=0.5) +
+  geom_smooth(method="loess", se=FALSE, aes(group=Year)) +
+  theme_minimal() +
+  scale_x_date(date_labels = "%b-%Y", date_breaks="1 month") +
+  theme(axis.text.x = element_text(angle=45, hjust=1)) +
+  labs(title="Homes Sold in 2020-2024", x="Date", y="Homes Sold")
+
+ladata_20_24 = ladata %>% filter(format(D))
+
+str(df)
+```

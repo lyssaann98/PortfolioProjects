@@ -1,0 +1,132 @@
+---
+title: "Logistic Regression Analysis"
+author: "Alyssa Rogers-Armstrong"
+date: "July 7th, 2024"
+output: pdf_document
+---
+
+```{r include=FALSE}
+# Set so that long lines in R will be wrapped:
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy=TRUE)
+
+library(tidyverse)
+library(caret)
+library(ggplot2)
+library(pROC)
+library(magrittr)
+
+data = read.csv("naivebayes_cleaneddata.csv")
+View(data)
+```
+
+
+# Clean Data
+```{r}
+#Subset DC data
+dcdata = subset(data, Region == "Washington, DC metro area")
+View(dcdata)
+
+#Change to Date format
+dcdata$DATE = as.Date(dcdata$DATE, format = '%m/%d/%y')
+
+# Create a binary variable for whether a home sells within 30 days
+dcdata <- dcdata %>% 
+  mutate(Sell.Within.30.Days = ifelse(Days.on.Market <= 30, 1, 0))
+
+#Keep needed columns
+dcdata = dcdata[, c("DATE", "Median.Sale.Price", "Inventory", "Sell.Within.30.Days", "New.Listings", "UNRATE.y", "T10Y2Y.y", "MORTGAGE30US.y")]
+
+#Change median sale price to a numeric value
+dcdata$Median.Sale.Price = as.numeric(gsub("[$K]", "", dcdata$Median.Sale.Price))
+
+# Change New.Listings to a numeric value
+dcdata$New.Listings = as.numeric(gsub(",", "", dcdata$New.Listings))
+
+# Change Inventory to numeric
+dcdata$Inventory = as.numeric(dcdata$Inventory)
+
+str(dcdata)
+```
+
+
+Data Analysis
+```{r}
+# Train-test split (70/30)
+set.seed(777)
+train_index = createDataPartition(dcdata$Sell.Within.30.Days, p = 0.7, list = FALSE)
+train_data = dcdata[train_index, ]
+test_data = dcdata[-train_index, ]
+
+# Fit full logistic regression model
+fullmodel = glm(Sell.Within.30.Days ~ Median.Sale.Price + New.Listings + Inventory + UNRATE.y + T10Y2Y.y + MORTGAGE30US.y, data = train_data, family = binomial)
+
+# Model Selection
+ols_step_both_aic(fullmodel)
+ols_step_forward_aic(fullmodel)
+
+# Final Model
+logisticmodel = glm(Sell.Within.30.Days ~ Median.Sale.Price + New.Listings + Inventory + T10Y2Y.y, data=train_data, family=binomial)
+summary(logisticmodel)
+
+
+# Make predictions on the training data
+train_predictions = predict(logisticmodel, newdata = train_data, type = "response")
+train_pred_class = ifelse(train_predictions > 0.5, 1, 0)
+
+# Make predictions on testing data
+test_predictions = predict(logisticmodel, newdata = test_data, type = "response")
+test_pred_class = ifelse(test_predictions > 0.5, 1, 0)
+
+# Confusion matrix and accuracy for training data
+conf_matrix_train = confusionMatrix(factor(train_pred_class), factor(train_data$Sell.Within.30.Days))
+
+# Confusion matrix and accuracy for testing data
+conf_matrix_test = confusionMatrix(factor(test_pred_class), factor(test_data$Sell.Within.30.Days))
+
+# Print Results
+cat("Training Data Confusion Matrix:\n")
+print(conf_matrix_train$table)
+cat("\nTraining Data Accuracy:", conf_matrix_train$overall['Accuracy'], "\n")
+
+cat("\nTesting Data Confusion Matrix:\n")
+print(conf_matrix_test$table)
+cat("\nTesting Data Accuracy:", conf_matrix_test$overall['Accuracy'], "\n")
+
+# Create ROC curve object
+roc_obj = roc(test_data$Sell.Within.30.Days, test_predictions)
+
+# Extract specificity and sensitivity for plotting
+roc_df = data.frame(
+  specificity = roc_obj$specificities,
+  sensitivity = roc_obj$sensitivities
+)
+
+# Plot the ROC Curve
+ggplot(data = roc_df, aes(x = 1 - specificity, y = sensitivity)) + 
+  geom_line() +
+  geom_abline(linetype = 'dashed') +
+  labs(title = "ROC Curve for Logistic Regression Model",
+       x = "1 - Specificity",
+       y = "Sensitivity") + 
+  theme_minimal()
+
+auc_value <- auc(roc_obj)
+print(auc_value)
+```
+
+```{r eval=FALSE, include=FALSE}
+# Display Pretty Confusion Matrix
+library(kableExtra)
+
+# Convert confusion matrix to data frame
+conf_matrix_df = as.data.frame.matrix(conf_matrix_test$table)
+
+# Display formatted confusion matrix
+conf_matrix_df %>%
+  kable("html") %>%
+  kable_styling("striped", full_width = F) %>%
+  add_header_above(c(" " = 1, "Prediction" = 2)) %>%
+  column_spec(1, bold = T)
+```
+
+

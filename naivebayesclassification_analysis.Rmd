@@ -1,0 +1,232 @@
+---
+title: "Naive Bayes Classification Analysis"
+author: "Alyssa Rogers-Armstrong"
+date: "July 6th, 2024"
+output: pdf_document
+---
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+# Set so that long lines in R will be wrapped:
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy=TRUE)
+```
+
+Load in libraries and data
+```{r}
+library(e1071)
+library(caret)
+
+
+data = read.csv("naivebayes_cleaneddata.csv")
+
+# Subset using the subset function
+bostondata = subset(data, Region == "Boston, MA metro area")
+
+ladata = subset(data, Region == "Los Angeles, CA metro area")
+
+chicagodata = subset(data, Region == "Chicago, IL metro area")
+
+phillydata = subset(data, Region == "Philadelphia, PA metro area")
+
+seattledata = subset(data, Region == "Seattle, WA metro area")
+
+dcdata = subset(data, Region == "Washington, DC metro area")
+
+nationaldata = subset(data, Region == " National")
+```
+
+
+Data Cleaning
+```{r}
+bostondata = bostondata[, c("Market.Type", "Sold.Inventory.Ratio", "UNRATE.y", "T10Y2Y.y", "MORTGAGE30US.y", "UMCSENT.y", "Region", "DATE")]
+bostondata$Market.Type = as.factor(bostondata$Market.Type)
+
+ladata = ladata[, c("Market.Type", "Sold.Inventory.Ratio", "UNRATE.y", "T10Y2Y.y", "MORTGAGE30US.y", "UMCSENT.y", "Region", "DATE")]
+ladata$Market.Type = as.factor(ladata$Market.Type)
+
+chicagodata = chicagodata[, c("Market.Type", "Sold.Inventory.Ratio", "UNRATE.y", "T10Y2Y.y", "MORTGAGE30US.y", "UMCSENT.y", "Region", "DATE")]
+chicagodata$Market.Type = as.factor(chicagodata$Market.Type)
+
+phillydata = phillydata[, c("Market.Type", "Sold.Inventory.Ratio", "UNRATE.y", "T10Y2Y.y", "MORTGAGE30US.y", "UMCSENT.y", "Region", "DATE")]
+phillydata$Market.Type = as.factor(phillydata$Market.Type)
+
+seattledata = seattledata[, c("Market.Type", "Sold.Inventory.Ratio", "UNRATE.y", "T10Y2Y.y", "MORTGAGE30US.y", "UMCSENT.y", "Region", "DATE")]
+seattledata$Market.Type = as.factor(seattledata$Market.Type)
+
+dcdata = dcdata[, c("Market.Type", "Sold.Inventory.Ratio", "UNRATE.y", "T10Y2Y.y", "MORTGAGE30US.y", "UMCSENT.y", "Region", "DATE")]
+dcdata$Market.Type = as.factor(dcdata$Market.Type)
+
+nationaldata = nationaldata[, c("Market.Type", "Sold.Inventory.Ratio", "UNRATE.y", "T10Y2Y.y", "MORTGAGE30US.y", "UMCSENT.y", "Region", "DATE")]
+nationaldata$Market.Type = as.factor(nationaldata$Market.Type)
+```
+
+Boston Analysis
+```{r}
+#Set seed for reproducibility
+set.seed(777)
+  
+# Split data into training and testing sets (70/30 split)
+trainIndexboston = createDataPartition(bostondata$Market.Type, p = 0.7, list = FALSE)
+train_databoston = bostondata[trainIndexboston, ]
+test_databoston = bostondata[-trainIndexboston, ]
+  
+  # Fit Naive Bayes model
+nb_modelboston = naiveBayes(Market.Type ~ UNRATE.y + T10Y2Y.y + MORTGAGE30US.y + UMCSENT.y, data = train_databoston)
+  
+  # Make predictions
+train_predictionsboston = predict(nb_modelboston, train_databoston)
+test_predictionsboston = predict(nb_modelboston, test_databoston)
+  
+  # Confusion matrix and accuracy for training set
+conf_matrix_trainboston = confusionMatrix(train_predictionsboston, train_databoston$Market.Type)
+  
+  # Confusion matrix and accuracy for testing set
+conf_matrix_testboston = confusionMatrix(test_predictionsboston, test_databoston$Market.Type)
+  
+  # Print results
+print(conf_matrix_trainboston)
+print(conf_matrix_testboston)
+
+# Function to plot confusion matrix
+plot_confusion_matrix <- function(conf_matrix, title) {
+  cm_data <- as.data.frame(conf_matrix$table)
+  ggplot(cm_data, aes(x = Reference, y = Prediction)) +
+    geom_tile(aes(fill = Freq), color = "white") +
+    scale_fill_gradient(low = "white", high = "steelblue") +
+    geom_text(aes(label = Freq), vjust = 1) +
+    labs(title = title, x = "Actual", y = "Predicted") +
+    theme_minimal()
+}
+
+# Plot confusion matrices
+plot_confusion_matrix(conf_matrix_trainboston, "Confusion Matrix for Training Set (Boston)")
+plot_confusion_matrix(conf_matrix_testboston, "Confusion Matrix for Testing Set (Boston)")
+```
+
+Chicago Analysis
+```{r}
+#Set seed for reproducibility
+set.seed(777)
+  
+# Split data into training and testing sets (70/30 split)
+trainIndexchicago = createDataPartition(chicagodata$Market.Type, p = 0.7, list = FALSE)
+train_datachicago = chicagodata[trainIndexchicago, ]
+test_datachicago = chicagodata[-trainIndexchicago, ]
+  
+  # Fit Naive Bayes model
+nb_modelchicago = naiveBayes(Market.Type ~ UNRATE.y + T10Y2Y.y + MORTGAGE30US.y + UMCSENT.y, data = train_datachicago)
+  
+  # Make predictions
+train_predictionschicago = predict(nb_modelchicago, train_datachicago)
+test_predictionschicago = predict(nb_modelchicago, test_datachicago)
+  
+  # Confusion matrix and accuracy for training set
+conf_matrix_trainchicago = confusionMatrix(train_predictionschicago, train_datachicago$Market.Type)
+  
+  # Confusion matrix and accuracy for testing set
+conf_matrix_testchicago = confusionMatrix(test_predictionschicago, test_datachicago$Market.Type)
+  
+  # Print results
+print(conf_matrix_trainchicago)
+print(conf_matrix_testchicago)
+
+# Function to plot confusion matrix
+plot_confusion_matrix <- function(conf_matrix, title) {
+  cm_data <- as.data.frame(conf_matrix$table)
+  ggplot(cm_data, aes(x = Reference, y = Prediction)) +
+    geom_tile(aes(fill = Freq), color = "white") +
+    scale_fill_gradient(low = "white", high = "steelblue") +
+    geom_text(aes(label = Freq), vjust = 1) +
+    labs(title = title, x = "Actual", y = "Predicted") +
+    theme_minimal()
+}
+
+# Plot confusion matrices
+plot_confusion_matrix(conf_matrix_trainchicago, "Confusion Matrix for Training Set (Chicago)")
+plot_confusion_matrix(conf_matrix_testchicago, "Confusion Matrix for Testing Set (Chicago)")
+```
+
+Philly Analysis
+```{r}
+#Set seed for reproducibility
+set.seed(777)
+  
+# Split data into training and testing sets (70/30 split)
+trainIndexphilly = createDataPartition(phillydata$Market.Type, p = 0.7, list = FALSE)
+train_dataphilly = phillydata[trainIndexphilly, ]
+test_dataphilly = phillydata[-trainIndexphilly, ]
+  
+  # Fit Naive Bayes model
+nb_modelphilly = naiveBayes(Market.Type ~ UNRATE.y + T10Y2Y.y + MORTGAGE30US.y + UMCSENT.y, data = train_dataphilly)
+  
+  # Make predictions
+train_predictionsphilly = predict(nb_modelphilly, train_dataphilly)
+test_predictionsphilly = predict(nb_modelphilly, test_dataphilly)
+  
+  # Confusion matrix and accuracy for training set
+conf_matrix_trainphilly = confusionMatrix(train_predictionsphilly, train_dataphilly$Market.Type)
+  
+  # Confusion matrix and accuracy for testing set
+conf_matrix_testphilly = confusionMatrix(test_predictionsphilly, test_dataphilly$Market.Type)
+  
+  # Print results
+print(conf_matrix_trainphilly)
+print(conf_matrix_testphilly)
+
+# Function to plot confusion matrix
+plot_confusion_matrix <- function(conf_matrix, title) {
+  cm_data <- as.data.frame(conf_matrix$table)
+  ggplot(cm_data, aes(x = Reference, y = Prediction)) +
+    geom_tile(aes(fill = Freq), color = "white") +
+    scale_fill_gradient(low = "white", high = "steelblue") +
+    geom_text(aes(label = Freq), vjust = 1) +
+    labs(title = title, x = "Actual", y = "Predicted") +
+    theme_minimal()
+}
+
+# Plot confusion matrices
+plot_confusion_matrix(conf_matrix_trainphilly, "Confusion Matrix for Training Set (Philly)")
+plot_confusion_matrix(conf_matrix_testphilly, "Confusion Matrix for Testing Set (Philly)")
+```
+
+National Analysis
+```{r}
+#Set seed for reproducibility
+set.seed(777)
+  
+# Split data into training and testing sets (70/30 split)
+trainIndexnational = createDataPartition(nationaldata$Market.Type, p = 0.7, list = FALSE)
+train_datanational = nationaldata[trainIndexnational, ]
+test_datanational = nationaldata[-trainIndexnational, ]
+  
+  # Fit Naive Bayes model
+nb_modelnational = naiveBayes(Market.Type ~ UNRATE.y + T10Y2Y.y + MORTGAGE30US.y + UMCSENT.y, data = train_datanational)
+  
+  # Make predictions
+train_predictionsnational = predict(nb_modelnational, train_datanational)
+test_predictionsnational = predict(nb_modelnational, test_datanational)
+  
+  # Confusion matrix and accuracy for training set
+conf_matrix_trainnational = confusionMatrix(train_predictionsnational, train_datanational$Market.Type)
+  
+  # Confusion matrix and accuracy for testing set
+conf_matrix_testnational = confusionMatrix(test_predictionsnational, test_datanational$Market.Type)
+  
+  # Print results
+print(conf_matrix_trainnational)
+print(conf_matrix_testnational)
+
+# Function to plot confusion matrix
+plot_confusion_matrix <- function(conf_matrix, title) {
+  cm_data <- as.data.frame(conf_matrix$table)
+  ggplot(cm_data, aes(x = Reference, y = Prediction)) +
+    geom_tile(aes(fill = Freq), color = "white") +
+    scale_fill_gradient(low = "white", high = "steelblue") +
+    geom_text(aes(label = Freq), vjust = 1) +
+    labs(title = title, x = "Actual", y = "Predicted") +
+    theme_minimal()
+}
+
+# Plot confusion matrices
+plot_confusion_matrix(conf_matrix_trainnational, "Confusion Matrix for Training Set (National)")
+plot_confusion_matrix(conf_matrix_testnational, "Confusion Matrix for Testing Set (National)")
+```
+

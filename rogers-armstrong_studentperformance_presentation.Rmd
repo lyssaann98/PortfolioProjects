@@ -1,0 +1,359 @@
+---
+title: "Student Performance Data Analysis"
+subtitle: "Advanced Methods of Regression: STAT 5214"
+author: "Alyssa Rogers-Armstrong"
+date: "June 19th, 2024"
+output:
+  xaringan::moon_reader:
+    self_contained: true
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      slideNumberFormat: "%current%/%total%"
+      ratio: "16:9"
+---
+```{r include=FALSE}
+#install.packages("")
+library(ggplot2) #plots
+library(car)
+library(MASS)
+library(knitr)
+library(formatR)
+library(reshape2) #melt plots together
+library(olsrr) # model selection
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60), tidy = TRUE)
+
+#Read in the data
+setwd("/Users/alyssarogers-armstrong/Documents/Virginia Tech/Summer 2024/Advanced Methods of Regression/Exams/Final Project")
+Data = read.csv("studentperformance.csv")
+View(Data)
+
+#Check the classes of the variables and change to factors for categorical variables
+Data$class_period = as.factor(Data$class_period)
+Data$ell_level = as.factor(Data$ell_level)
+Data$ethnicity = as.factor(Data$ethnicity)
+Data$gender = as.factor(Data$gender)
+Data$honors_math = as.factor(Data$honors_math)
+str(Data)
+```
+
+# Motivation for Analysis
+```{r, echo=FALSE, out.width="50%", fig.align='center'}
+knitr::include_graphics("/Users/alyssarogers-armstrong/Documents/Virginia Tech/Summer 2024/Advanced Methods of Regression/Exams/Final Project/testpicture.jpg")
+```
+
+
+
+Every year in Virginia, 7th grade students take a Standards of Learning (SOL) exam in math that assesses their knowledge of the 7th grade math curriculum. The goal of this study is to develop a regression model that can predict students' SOL score based on different explanatory variables.
+
+---
+# Introduction
+
+### Research Question
+- How do various factors such as class period, average grades, test averages, and others influence the SOL score?
+
+### Hypotheses
+- Students' SOL scores are significantly affected by their average grades, class periods, and other factors.
+
+---
+
+### Data Description
+
+```{r echo=FALSE}
+# Displaying an interactive data table with horizontal scrolling
+library(DT)
+datatable(head(Data), options = list(scrollX = TRUE), caption = "Overview of the Student Performance Dataset")
+```
+---
+### Variable Descriptions
+
+```{r echo=FALSE, message=FALSE}
+# Load necessary libraries
+library(knitr)
+library(dplyr)
+
+# Create a data frame with the variable descriptions
+variable_descriptions <- data.frame(
+  Variable = c("class_period", "ell_level", "average_map", "average_grades", 
+               "sol_score", "ethnicity", "gender", "absences", "tardys", 
+               "test_averages", "ixl_skills_practiced", "honors_math", "dessa"),
+  Description = c("The period during which the class is held.", 
+                  "The English Language Learner (ELL) level of the student.", 
+                  "Average score on the MAP assessments.", 
+                  "Average of grades across subjects.", 
+                  "Standards of Learning (SOL) test score.", 
+                  "Self-reported ethnicity of the student.", 
+                  "Gender of the student.", 
+                  "Number of school days the student was absent.", 
+                  "Number of times the student was late to class.", 
+                  "Average score on various tests throughout the academic year.", 
+                  "Number of IXL skills practiced by the student.", 
+                  "Indicates whether the student is enrolled in honors-level math.", 
+                  "DESSA score measuring social-emotional competencies."),
+  Type = c("Categorical", "Categorical", "Continuous", "Continuous", 
+           "Continuous", "Categorical", "Categorical", "Continuous", 
+           "Continuous", "Continuous", "Continuous", "Categorical", "Continuous")
+)
+
+# Display the table
+kable(variable_descriptions, caption = "Description of Key Variables in the Dataset")
+```
+---
+
+### Exploratory Data Analysis
+
+```{r echo=FALSE, message=FALSE, fig.width=14, fig.height=7}
+library(ggplot2)
+library(gridExtra)
+
+p1 = ggplot(Data, aes(x = average_map, y = sol_score)) +
+  geom_point(color = "blue") +
+  geom_smooth(method = "lm", col = "red") +
+  labs(title = "Average MAP Score vs. SOL Score",
+       x = "Average MAP Score",
+       y = "SOL Score") +
+  theme_minimal()
+
+p2 = ggplot(Data, aes(x = class_period, y = sol_score)) +
+  geom_boxplot(fill = "lightgreen") +
+  labs(title = "SOL Score by Class Period",
+       x = "Class Period",
+       y = "SOL Score") +
+  theme_minimal()
+
+p3 = ggplot(Data, aes(x = sol_score)) +
+  geom_histogram(binwidth = 10, fill = "lightblue", color = "black") +
+  labs(title = "Distribution of SOL Scores",
+       x = "SOL Score",
+       y = "Frequency") +
+  theme_minimal()
+
+library(ggcorrplot)
+
+numeric_data <- Data[, sapply(Data, is.numeric)]
+cor_matrix <- cor(numeric_data, use = "complete.obs")
+
+p4 = ggcorrplot(cor_matrix, method = "circle", type = "lower", lab = TRUE, lab_size = 3,
+           title = "Correlation Matrix Heatmap", colors = c("blue", "white", "red"))
+
+grid.arrange(p1, p2, p3, p4, ncol=2, nrow=2)
+```
+
+---
+
+## Model Selection
+
+**Full Model**
+
+- Included variables: 'class_period', 'ell_level', 'test_averages', 'average_map', 'average_grades', 'ethnicity', 'gender', 'absences', 'tardys', 'ixl_skills_practiced', 'dessa', 'test_averages' * 'class_period'
+
+**Model Selection Process**
+
+- Forward, backward, and stepwise selection methods used.
+
+- All selection processes came to the same results
+
+
+**Final Model**
+
+- Variables include: 'class_period', 'average_map', 'test_averages', 'ixl_skills_practiced',  and the interaction between 'class_period' and 'test_averages' should be included.
+
+- Model chosen based on lowest AIC, MSE, and the highest Adjusted R-Squares value
+
+---
+
+#### Final Model Output - Interaction
+
+```{r include=FALSE}
+full_interaction_model = lm(sol_score ~ class_period + ell_level + test_averages + average_map + average_grades + ethnicity + gender + absences + tardys + ixl_skills_practiced + dessa + class_period*test_averages, data=Data)
+
+stepinteraction = ols_step_both_aic(full_interaction_model)
+
+finalmodel = lm(sol_score ~ class_period + average_map + test_averages + ixl_skills_practiced + class_period*test_averages, data=Data)
+
+summary(finalmodel)
+```
+
+**Adjusted R-Squared**: .783 **AIC**: 906.357 **MSE**: 442.982
+
+```{r echo=FALSE, message=FALSE}
+library(broom)
+tidy_model <- tidy(finalmodel)
+kable(tidy_model)
+```
+
+---
+
+### Model Diagnostics - Normal Probability Plot
+
+- Most data points fall near the 45-degree line, indicating normality.
+    
+```{r echo=FALSE}
+Data$fitted = finalmodel$fitted.values #adding fitted values
+Data$residuals = finalmodel$residuals #adding residuals
+Data$studres = studres(finalmodel) #adding studentized residuals
+
+# Regular Residuals
+ols_plot_resid_qq(finalmodel)
+
+# Studentized Residuals
+qqPlot(finalmodel, ylab="Studentized Residuals", xlab="Theoretical Quantiles")
+```
+
+---
+
+### Model Diagnostics - Residuals vs. Fitted Values
+
+- There are no discernible patterns here, indicating a constant variance.
+
+```{r echo=FALSE}
+# Regular Residuals
+ols_plot_resid_fit(finalmodel)
+
+# Studentized Residuals
+ggplot(data=Data, aes(x=fitted, y=studres))+geom_point()+
+  labs(title='Studentized Residuals', y="Studentized Residuals", x="Fitted Values")+
+  geom_hline(yintercept=0, color='red')+theme_bw()
+```
+
+---
+
+### Model Diagnostics - Multicollinearity (VIF Scores)
+
+- We have VIF values that are greater than 10, we could try centering the data to help with the multicollinearity problem, insead of removing variables.
+
+```{r echo=FALSE, message=FALSE}
+library(olsrr)
+knitr::kable(ols_vif_tol(finalmodel))
+```
+
+---
+## Centering the Data
+
+- Centering the data helped decrease the VIF scores all below 10.
+
+.pull-left[
+
+```{r echo=TRUE}
+# Center the average_map variable
+Data$average_test_centered <- Data$test_averages - mean(Data$test_averages, na.rm = TRUE)
+
+# Fit the model with the centered interaction term
+interaction_model_centered <- lm(sol_score ~ class_period * average_test_centered + average_map + ixl_skills_practiced , data = Data)
+```
+]
+
+.pull-right[
+```{r echo=FALSE}
+knitr::kable(ols_vif_tol(interaction_model_centered))
+```
+]
+
+---
+### New Final Model - Centered Data and Interaction Term
+
+**Adjusted R-Squared**: .7832
+
+```{r echo=FALSE, message=FALSE}
+summary(interaction_model_centered)
+
+library(broom)
+tidy_model <- tidy(interaction_model_centered)
+kable(tidy_model)
+```
+
+---
+### Model Diagnostics - Normal Probability Plot
+
+- Most data points fall near the 45-degree line, indicating normality.
+
+```{r echo=FALSE}
+Data$fitted = interaction_model_centered$fitted.values #adding fitted values
+Data$residuals = interaction_model_centered$residuals #adding residuals
+Data$studres = studres(interaction_model_centered) #adding studentized residuals
+
+# Regular Residuals
+ols_plot_resid_qq(interaction_model_centered)
+
+# Studentized Residuals
+qqPlot(interaction_model_centered, ylab="Studentized Residuals", xlab="Theoretical Quantiles")
+```
+
+---
+### Model Diagnostics - Residuals vs. Fitted Values
+
+- There are no discernible patterns here, indicating a constant variance.
+
+```{r echo=FALSE}
+# Regular Residuals
+ols_plot_resid_fit(interaction_model_centered)
+
+# Studentized Residuals
+ggplot(data=Data, aes(x=fitted, y=studres))+geom_point()+
+  labs(title='Studentized Residuals', y="Studentized Residuals", x="Fitted Values")+
+  geom_hline(yintercept=0, color='red')+theme_bw()
+```
+
+---
+## Model Diagnostics - Leverage and Influence Diagnostics
+
+- No significant outliers or leverage points affecting the model
+
+    + After checking Cook's D chart, DFBETAS, and DFFITS, I removed the leverage points and outliers that were in the model. 
+    
+    + There were no changes in significance between the model and the reduced model and none of the parameter estimates changes signs.
+    
+    + This indicates that this model is robust to influential observations.
+---
+
+#### Model Diagnostics -  Polynomial Terms
+Adding a polynomial term on the average_map variable made the model more complex and didn't help the assumptions at all. It also made the VIF scores worse.
+
+```{r echo=FALSE, fig.height=5, fig.width=10}
+library(car)
+avPlots(interaction_model_centered)
+```
+
+---
+### Interpretations - Statistically Significant (< 0.05)
+
+- **Class Period 6** (Estimate: -51.08, p-value: 0.0000912):
+
+    + Interpretation: Students in class period 6 are expected to score about 51.08 points lower on the sol_score compared to those in class period 1, holding all other variables constant. This effect is statistically significant, suggesting a strong negative impact of being in class period 6 on sol_score.
+
+- **Average MAP** (Estimate: 2.07, p-value: 0)
+
+    + Interpretation: For each one-point increase in average_map, the sol_score increases by approximately 2.07 points, holding all other variables constant at their mean values. This effect is highly statistically significant, suggesting a strong positive relationship between average_map and sol_score.
+
+- **Class Period 6 | Test Averages** (Estimate: 2.80, p-value: 0.000205):
+
+    + Interpretation: The interaction term is statistically significant and suggests that for students in class period 6, the relationship between test_averages and sol_score is much stronger than in class period 1. Specifically, for each one-point increase in test_averages (relative to the mean), the sol_score is expected to increase by approximately 2.80 points.
+    
+---
+
+### Discussions and Limitations
+
+**Limitations**
+- A small sample size can limit the power of the statistical tests, increasing the likelihood of Type II errors (failing to detect an effect that is actually present).
+- Interactions can be difficult to interpret
+-  Limited generalizability reduces the applicability of the model to different populations or settings.
+
+**Improvements**
+- Collect more data to improve model robustness.
+- Explore additional interaction terms or alternative models.
+
+---
+
+### Conclusion
+
+**Summary**
+- Investigated factors affecting SOL scores using linear regression analysis.
+- Identified significant variables and interactions affecting student performance.
+
+**Final Takeaways**
+- Significant Predictors: The significant predictors include class_period6, average_map, and the interaction between class_period6 and test_averages. These variables have strong influences on sol_score.
+
+- Non-significant Predictors: Other class_periods, test_averages_centered, and ixl_skills_practiced do not have significant impacts in this model, suggesting that their effects might be less consistent or weaker.
+

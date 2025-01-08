@@ -1,0 +1,300 @@
+---
+title: "P53 Data Analysis"
+author: "Alyssa Rogers-Armstrong"
+date: "February 2024"
+output: pdf_document
+---
+
+```{r}
+Data = read.csv("p53.csv")
+View(Data)
+library(ggplot2)
+library(magrittr)
+library(dplyr)
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(pscl)
+library(pROC)
+library(plotROC)
+library(caret)
+```
+
+
+## Exploratory Analysis
+
+
+```{r}
+# Display the structure of the data
+str(Data)
+
+# Summary statistics
+summary(Data)
+
+# Histogram of the percentage of nuclei stained with p53 in IHC
+ggplot(Data, aes(x = Percent.Nuclei.Stained.in.p53.IHC)) +
+  geom_histogram(binwidth = 0.1, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of % Nuclei Stained with p53 in IHC",
+       x = "% Nuclei Stained", y = "Frequency")
+
+# Boxplot of % Nuclei Stained by TP53 Sanger Status
+ggplot(Data, aes(x = as.factor(TP53.Sanger.Status), y = Percent.Nuclei.Stained.in.p53.IHC)) +
+  geom_boxplot(fill = "lightgreen", color = "black") +
+  labs(title = "Boxplot of % Nuclei Stained by TP53 Sanger Status",
+       x = "TP53 Sanger Status", y = "% Nuclei Stained")
+
+
+# Outlier detection
+outliers <- boxplot.stats(Data$Percent.Nuclei.Stained.in.p53.IHC)$out
+print(outliers)
+
+# Missing values
+missing_values <- colSums(is.na(Data))
+print(missing_values)
+
+
+# Scatterplot
+ggplot(Data, aes(x=proportion.of.nuclei.stained.with.p53.in.IHC, y=TP53.Sanger.Status..0.1.))+geom_point()+theme_bw()+
+  labs(x="Proportion of Nuclei Stains (IHC)", y="Sanger Status")
+
+# Scatterplot with Log Curve
+
+# Predict probabilities using the logistic regression model
+predicted_probs <- predict(logmodel, type = "response")
+
+# Create scatterplot of data
+plot(Data$Percent.Nuclei.Stained.in.p53.IHC, Data$TP53.Sanger.Status..0.1., 
+     xlab = "Percent Nuclei Stained in p53 IHC", 
+     ylab = "TP53 Mutation Status", 
+     main = "Scatterplot with Logistic Regression Line")
+
+# Add logistic regression line to the plot
+x_values <- seq(min(Data$Percent.Nuclei.Stained.in.p53.IHC), max(Data$Percent.Nuclei.Stained.in.p53.IHC), length.out = 100)
+y_values <- predict(logmodel, newdata = data.frame(Percent.Nuclei.Stained.in.p53.IHC = x_values), type = "response")
+lines(x_values, y_values, col = "red")
+
+ggplot(Data, aes(x=Percent.Nuclei.Stained.in.p53.IHC, y=TP53.Sanger.Status..0.1.,shape=TP53.Sanger.Status, color=TP53.Sanger.Status))+
+  geom_point()+geom_jitter(height=0.09,width=0.09)+
+  xlab("Percent Nuclei Stained in p53 IHC Test")+
+  ylab("IHC Test Results")+
+  ggtitle("Percent Nuclei Stained vs. IHC Test Results at 40% Threshold by TP53 Mutation")+
+  stat_smooth(method='glm', color='blue', se=FALSE, method.args=list(family="binomial"))
+
+
+library(ggplot2)
+ggplot(Data, aes(x = Percent.Nuclei.Stained.in.p53.IHC, y = TP53.Sanger.Status..0.1., color=TP53.Sanger.Status..0.1.)) +
+  geom_point() + # Add scatter plot points
+  geom_smooth(method = "glm", method.args = list(family = "binomial"), se = FALSE) +  # Overlay logistic regression line
+  labs(x = "Percent Nuclei Stained", y = "TP53 Sanger Status (0/1)") +  # Set axis labels
+  theme_minimal() +  # Use minimal theme for cleaner appearance
+  theme(legend.position="none")
+
+
+
+ggplot(Data, aes(x=Percent.Nuclei.Stained.in.p53.IHC, y=TP53.Sanger.Status..0.1., shape=TP53.Sanger.Status, color=TP53.Sanger.Status))+
+  geom_point(position=position_dodge(width=1.5))+
+  xlab("Percent Nuclei Stained in p53 IHC Test")+
+  ylab("Probability of TP53 Mutation")+
+  ggtitle("Percent Nuclei Stained vs. Probability of TP53 Mutation")+
+  theme(plot.title=element_text(hjust=0.1))+
+  labs(shape="Actual TP53 Mutation", color="Actual TP53 Mutation")+
+  theme(legend.position="bottom")+
+  stat_smooth(method='glm', color='darkgreen',linewidth=0.5,
+              se=FALSE,method.args=list(family=binomial))
+```
+
+## Statistical Analysis
+
+Creating Factors:
+
+```{r}
+Data$TP53.Sanger.Status = as.factor(Data$TP53.Sanger.Status)
+Data$TP53.Sanger.Status..0.1. = as.factor(Data$TP53.Sanger.Status..0.1.)
+Data$IHC.P53.Status = as.factor(Data$IHC.P53.Status)
+```
+
+
+## Fit the Model:
+
+```{r}
+# Fit the logistic regression model
+logmodel <- glm(TP53.Sanger.Status..0.1. ~ Percent.Nuclei.Stained.in.p53.IHC, data=Data, family = binomial)
+summary(logmodel)
+```
+
+- A one unit increase in Percent of Nuclei Stained is associated with an average increase of 0.12120 in the log odds of TP53 Sanger Status.
+
+## Calculating McFadden's R-Square
+```{r}
+# Calculate McFadden's R-Squared
+
+pscl::pR2(logmodel)["McFadden"]
+```
+
+- We can compute a metric known as McFadden’s R2, which ranges from 0 to just under 1. Values close to 0 indicate that the model has no predictive power. In practice, values over 0.40 indicate that a model fits the data very well.
+
+- McFadden = 0.7637797
+
+- A value of 0.7637797 is very high for McFadden’s R2, which indicates that our model fits the data very well and has high predictive power.
+
+
+## Odds Ratio
+
+- Model Interpretation: Percent Nuclei Stained (p = 0.00633) is significantly associated with the TP53 Sanger Status at the 0.05 level. 
+
+- Odds Ratio Interpretation: For each additional percentage of P53 nuclei stained in IHC, there is a 12.8% increased odds of a TP53 mutation.
+```{r}
+or_logmodel = exp(logmodel$coefficients)
+ci_logmodel = exp(confint(logmodel))
+orci_logmodel = cbind(or_logmodel, ci_logmodel)
+orci_logmodel
+```
+## Confusion Matrix at 10% Threshold
+
+- This is telling us that at the 10% threshold, there are a lot of false positives. This would waste a lot of resources by further testing these patients when they are true negatives.
+
+```{r}
+# Define the threshold
+threshold <- 10
+
+# Classify observations based on the threshold
+predicted_TP53_status <- ifelse(Data$Percent.Nuclei.Stained.in.p53.IHC >= threshold, 1, 0)
+
+# Create confusion matrix
+conf_matrix <- table(Actual = Data$TP53.Sanger.Status..0.1., Predicted = predicted_TP53_status)
+
+
+conf_matrix_obj <- as.matrix(conf_matrix)
+
+# Create confusion matrix using caret
+cm <- confusionMatrix(conf_matrix_obj)
+
+# Convert to data frame for ggplot2
+cm_df <- as.data.frame(cm$table)
+
+cm_df$Actual <- ifelse(cm_df$Actual == 0, "Negative", "Positive")
+cm_df$Predicted <- ifelse(cm_df$Predicted == 0, "Negative", "Positive")
+
+# Plot confusion matrix using ggplot2
+ggplot(cm_df, aes(x = Actual, y = Predicted, fill = Freq)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = Freq), vjust = 1) +
+  scale_fill_gradient(low = "lightblue", high = "darkblue") +
+  labs(x = "Predicted", y = "Actual", title = "Confusion Matrix") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+confusionMatrix(Data$IHC.P53.Status, reference=Data$TP53.Sanger.Status, positive='Positive')
+```
+
+## Confusion Matrix at 40% Threshold
+```{r}
+# Define the threshold
+threshold <- 40
+
+# Classify observations based on the threshold
+predicted_TP53_status <- ifelse(Data$Percent.Nuclei.Stained.in.p53.IHC >= threshold, 1, 0)
+
+# Create confusion matrix
+conf_matrix <- table(Actual = Data$TP53.Sanger.Status..0.1., Predicted = predicted_TP53_status)
+
+
+conf_matrix_obj <- as.matrix(conf_matrix)
+
+# Create confusion matrix using caret
+cm <- confusionMatrix(conf_matrix_obj)
+
+# Convert to data frame for ggplot2
+cm_df <- as.data.frame(cm$table)
+
+cm_df$Actual <- ifelse(cm_df$Actual == 0, "Negative", "Positive")
+cm_df$Predicted <- ifelse(cm_df$Predicted == 0, "Negative", "Positive")
+
+# Plot confusion matrix using ggplot2
+ggplot(cm_df, aes(x = Actual, y = Predicted, fill = Freq)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = Freq), vjust = 1) +
+  scale_fill_gradient(low = "lightblue", high = "darkblue") +
+  labs(x = "Predicted", y = "Actual", title = "Confusion Matrix") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+## Optimal Cutpoint
+```{r}
+library(cutpointr)
+optimal = cutpointr(Data, Percent.Nuclei.Stained.in.p53.IHC, TP53.Sanger.Status..0.1., method = maximize_metric, metric = sum_sens_spec)
+summary(optimal)
+```
+
+## ROC Plot
+
+```{r}
+# Create ROC curve
+
+basic.roc = ggplot(Data, aes(d=TP53.Sanger.Status, m=Percent.Nuclei.Stained.in.p53.IHC))+geom_roc()
+basic.roc
+```
+
+
+## Confidence Intervals
+
+```{r}
+# Calculate inverse confidence intervals
+conf_intervals <- confint(logmodel)
+
+# Print confidence intervals
+print("Confidence intervals for coefficients:")
+print(conf_intervals)
+
+# Extract coefficient estimates and their confidence intervals
+coef_estimates <- coef(logmodel)
+lower_ci <- conf_intervals[, 1]
+upper_ci <- conf_intervals[, 2]
+
+# Calculate inverse confidence intervals
+inv_lower_ci <- 1 / (1 + exp(-(coef_estimates + lower_ci)))
+inv_upper_ci <- 1 / (1 + exp(-(coef_estimates + upper_ci)))
+
+# Create a data frame with inverse confidence intervals
+inv_ci_df <- data.frame(coef = names(coef_estimates),
+                        inv_lower_ci = inv_lower_ci,
+                        inv_upper_ci = inv_upper_ci)
+
+# Print the data frame
+print("Inverse Confidence Intervals for Predicted Probabilities:")
+print(inv_ci_df)
+
+
+
+# Plot inverse confidence intervals
+ggplot(inv_ci_df, aes(x = coef, y = inv_lower_ci)) +
+  geom_bar(stat = "identity", fill = "lightblue") +
+  geom_errorbar(aes(ymin = inv_lower_ci, ymax = inv_upper_ci), width = 0.4) +
+  labs(x = "Percent Nuclei Stained in p53 IHC",
+       y = "Inverse Confidence Interval",
+       title = "Inverse Confidence Intervals on IHC Staining Percentage") +
+  theme_minimal()
+
+# Plot bar graph with confidence intervals and point estimates
+ggplot(inv_ci_df, aes(x = coef, y = inv_lower_ci)) +
+  geom_bar(stat = "identity", fill = "lightblue") +
+  geom_errorbar(aes(ymin = inv_lower_ci, ymax = inv_upper_ci), width = 0.4) +
+  geom_text(aes(label = round(inv_lower_ci, 2)), vjust = -0.5) +
+  labs(x = "Percent Nuclei Stained in p53 IHC",
+       y = "Inverse Confidence Interval",
+       title = "Inverse Confidence Intervals on IHC Staining Percentage") +
+  theme_minimal()
+
+
+
+ggplot(inv_ci_df, aes(x=coef, y=frequency(coef)))+geom_point()+
+  geom_errorbar(aes(ymin=inv_lower_ci, ymax=inv_upper_ci))
+
+
+```

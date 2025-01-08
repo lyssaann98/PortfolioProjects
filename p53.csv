@@ -1,0 +1,42 @@
+Sample,proportion of nuclei stained with p53 in IHC,Mutation,IHC P53 Status,TP53 Sanger Status,TP53 Sanger Status (0/1),Comments,Percent Nuclei Stained in p53 IHC
+CGB 1,0.9,H179R,Positive,Positive,1,,90
+CGB 2,0.05,no mutation,Negative,Negative,0,,5
+CGB 4,0.1,no mutation,Positive,Negative,0,,10
+CGB 5,0.25,no mutation,Positive,Negative,0,,25
+CGB 8,0.3,no mutation,Positive,Negative,0,,30
+CGB 10,0.05,no mutation,Negative,Negative,0,,5
+CGB 11,0.02,no mutation,Negative,Negative,0,,2
+CGB 12,0.8,R273C,Positive,Positive,1,,80
+CGB 17,0.05,no mutation,Negative,Negative,0,,5
+CGB 18,0.05,no mutation,Negative,Negative,0,,5
+CGB 21,0.6,no mutation,Positive,Negative,0,,60
+CGB 23,0.01,no mutation,Negative,Negative,0,,1
+CGB 24,0.1,no mutation,Positive,Negative,0,,10
+CGB 26,0.05,no mutation,Negative,Negative,0,,5
+CGB 27,0.4,no mutation,Positive,Negative,0,,40
+CGB 28,0.1,no mutation,Positive,Negative,0,,10
+CGB 30,0.2,no mutation,Positive,Negative,0,,20
+CGB 33,0.2,no mutation,Positive,Negative,0,,20
+CGB 36,0.25,no mutation,Positive,Negative,0,,25
+CGB 37,0.2,no mutation,Positive,Negative,0,,20
+CGB 39,0.05,no mutation,Negative,Negative,0,*original mutation status P108P,5
+CGB 44,0.4,R158H,Positive,Positive,1,,40
+CGB 47,0.01,no mutation,Negative,Negative,0,,1
+CGB 48,0.7,R273H,Positive,Positive,1,,70
+CGB 49,0.1,no mutation,Positive,Negative,0,,10
+CGB 50,0.25,no mutation,Positive,Negative,0,,25
+CGB 51,0.1,no mutation,Positive,Negative,0,,10
+CGB 54,0.05,no mutation,Negative,Negative,0,,5
+CGB 55,0,no mutation,Negative,Negative,0,,0
+CGB 56,0.6,no mutation,Positive,Negative,0,,60
+CGB 57,0.25,no mutation,Positive,Negative,0,,25
+CGB 58,0.8,Y234D,Positive,Positive,1,,80
+CGB 59,0.05,no mutation,Negative,Negative,0,,5
+CGB 60,0.05,no mutation,Negative,Negative,0,,5
+CGB 61,0.05,no mutation,Negative,Negative,0,,5
+CGB 63,0.9,M246T,Positive,Positive,1,,90
+CGB 65,0.1,no mutation,Positive,Negative,0,,10
+CGB 66,0.2,no mutation,Positive,Negative,0,,20
+CGB 67,0.3,no mutation,Positive,Negative,0,,30
+CGB 68,0.75,N235D,Positive,Positive,1,,75
+CGB 69,0.9,C176Y,Positive,Positive,1,,90

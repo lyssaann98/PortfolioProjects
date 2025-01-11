@@ -1,0 +1,77 @@
+---
+title: "data_eda_rogersarmstrong"
+author: "Alyssa Rogers-Armstrong"
+date: "2024-11-13"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+setwd("/Users/alyssarogers-armstrong/Documents/Virginia Tech/Fall 2024/Experimental Design/Project")
+data = read.csv("data.csv")
+```
+
+
+# Outlier Analysis
+
+- There are only outliers in purity and primerbydntp. Since these outliers don't seem significant, we might not need extensive adjustments to the dataset.
+
+```{r}
+# For all numeric variables in the dataset
+numeric_columns <- sapply(data, is.numeric)
+boxplot(data[, numeric_columns], main = "Boxplots of Numeric Variables", las = 2)
+```
+
+
+
+```{r}
+# Function to find outliers based on IQR
+find_outliers_iqr <- function(df) {
+  outliers <- list()
+  for (col in colnames(df)) {
+    if (is.numeric(df[[col]])) {
+      Q1 <- quantile(df[[col]], 0.25)
+      Q3 <- quantile(df[[col]], 0.75)
+      IQR <- Q3 - Q1
+      lower_bound <- Q1 - 1.5 * IQR
+      upper_bound <- Q3 + 1.5 * IQR
+      outliers[[col]] <- df[[col]][df[[col]] < lower_bound | df[[col]] > upper_bound]
+    }
+  }
+  return(outliers)
+}
+
+# Applying the function to find outliers
+outliers_iqr <- find_outliers_iqr(data)
+outliers_iqr  # This will list outliers for each numeric column
+```
+
+
+# Decision Tree
+
+- 
+
+
+```{r}
+library(rpart)
+library(vip)
+
+# Build the decision tree model with yield as the response variable
+tree_model_yield <- rpart(yield..ng.uL. ~ ., data = data, method = "anova")
+
+# Build the decision tree model with yield as the response variable
+tree_model_purity <- rpart(purity.... ~ ., data = data, method = "anova")
+
+# Generate a variable importance plot
+vip(tree_model_yield, num_features = 10, geom = "point") + 
+  ggtitle("Variable Importance Plot - Yield")
+
+# Generate a variable importance plot
+vip(tree_model_purity, num_features = 10, geom = "point") + 
+  ggtitle("Variable Importance Plot - Purity")
+
+
+
+
+```

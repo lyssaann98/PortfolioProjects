@@ -1,0 +1,139 @@
+---
+title: "EDA Combined Data"
+author: "Alyssa Rogers-Armstrong"
+date: "2024-12-16"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(magrittr)
+library(tidyr)
+library(dplyr)
+
+# Read in Data
+combined = read.table("combined_data_final.txt", sep=",", header=1)
+
+View(combined)
+
+colnames()
+```
+
+```{r}
+# Histograms for numeric variables
+combined %>%
+  select(-polym_type) %>%
+  gather(key = "Variable", value = "Value") %>%
+  ggplot(aes(x = Value)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "black") +
+  facet_wrap(~ Variable, scales = "free", ncol = 3) +
+  theme_minimal() +
+  labs(title = "Histograms of Numeric Variables")
+
+# Boxplots for numeric variables
+combined %>%
+  select(-polym_type) %>%
+  gather(key = "Variable", value = "Value") %>%
+  ggplot(aes(x = Variable, y = Value)) +
+  geom_boxplot(fill = "coral") +
+  coord_flip() +
+  theme_minimal() +
+  labs(title = "Boxplots of Numeric Variables")
+```
+
+```{r}
+# Correlation matrix for numeric variables
+correlations <- cor(combined %>% select(-polym_type), use = "complete.obs")
+round(correlations, 2)
+
+# Heatmap of correlations
+library(corrplot)
+corrplot(correlations, method = "color", type = "lower", tl.col = "black", tl.srt = 45)
+```
+
+```{r}
+# Correlation matrix for numeric variables
+correlations <- cor(combined %>% select(-polym_type), use = "complete.obs")
+round(correlations, 2)
+
+# Heatmap of correlations
+install.packages("corrplot")
+library(corrplot)
+corrplot(correlations, method = "color", type = "lower", tl.col = "black", tl.srt = 45)
+```
+
+```{r}
+# Boxplot of yield by polymerase type
+ggplot(combined, aes(x = polym_type, y = yield..ng.uL., fill = polym_type)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Yield by Polymerase Type", x = "Polymerase Type", y = "Yield (ng/µL)")
+
+# Boxplot of purity by polymerase type
+ggplot(combined, aes(x = polym_type, y = purity...., fill = polym_type)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Purity by Polymerase Type", x = "Polymerase Type", y = "Purity (%)")
+```
+
+```{r}
+# Summary statistics by polymerase type
+combined %>%
+  group_by(polym_type) %>%
+  summarise(
+    mean_yield = mean(yield..ng.uL., na.rm = TRUE),
+    sd_yield = sd(yield..ng.uL., na.rm = TRUE),
+    mean_purity = mean(purity...., na.rm = TRUE),
+    sd_purity = sd(purity...., na.rm = TRUE)
+  )
+```
+
+```{r}
+# Scatterplot of time vs yield
+ggplot(combined, aes(x = time..min., y = yield..ng.uL., color = polym_type)) +
+  geom_point() +
+  theme_minimal() +
+  labs(title = "Time vs Yield", x = "Time (min)", y = "Yield (ng/µL)")
+
+# Scatterplot of time vs purity
+ggplot(combined, aes(x = time..min., y = purity...., color = polym_type)) +
+  geom_point() +
+  theme_minimal() +
+  labs(title = "Time vs Purity", x = "Time (min)", y = "Purity (%)")
+```
+
+```{r}
+# Calculate summary statistics for key variables
+summary_stats <- combined %>%
+  summarise(
+    mean_yield = mean(yield..ng.uL., na.rm = TRUE),
+    sd_yield = sd(yield..ng.uL., na.rm = TRUE),
+    min_yield = min(yield..ng.uL., na.rm = TRUE),
+    max_yield = max(yield..ng.uL., na.rm = TRUE),
+    mean_purity = mean(purity...., na.rm = TRUE),
+    sd_purity = sd(purity...., na.rm = TRUE),
+    min_purity = min(purity...., na.rm = TRUE),
+    max_purity = max(purity...., na.rm = TRUE)
+  )
+```
+
+```{r}
+newdata = data.frame(
+  Response = rep(c("Yield", "Purity", "Time"), each = 2),
+  Setting = rep(c("Average Original", "Average Optimized"), 3),
+  Value = c(663.92, 968, 99.2, 99.3, 60.22, 78.9)
+)
+
+
+# Plot the grouped bar chart
+ggplot(newdata, aes(x = Response, y = Value, fill = Setting)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_manual(values = c("Average Original" = "lightblue", "Average Optimized" = "lightgreen")) +
+  labs(title = "Response Variables Before and After Optimization",
+       x = "Response Variable",
+       y = "Value",
+       fill = "Setting") +
+  theme_minimal(base_size = 14) +
+  geom_text(aes(label = Value), position = position_dodge(width = 0.9), vjust = -0.5)
+```
+
